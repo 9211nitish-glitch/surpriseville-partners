@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Surprise Ville Partners</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap" rel="head">
+  <style>
+    :root {
+      --bg-gradient: linear-gradient(135deg, #0f0c20 0%, #15102a 50%, #06040d 100%);
+      --accent-color: #7b2cbf;
+      --text-color: #ffffff;
+      --sub-text: #a0a0c0;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Outfit', sans-serif;
+      background: var(--bg-gradient);
+      color: var(--text-color);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      overflow: hidden;
+    }
+
+    .container {
+      text-align: center;
+      padding: 2rem;
+      max-width: 400px;
+      animation: fadeIn 1s ease-out;
+    }
+
+    .logo-container {
+      margin-bottom: 2rem;
+      position: relative;
+    }
+
+    .logo {
+      width: 120px;
+      height: 120px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 50%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin: 0 auto;
+      border: 2px solid rgba(123, 44, 191, 0.3);
+      box-shadow: 0 0 20px rgba(123, 44, 191, 0.2);
+      animation: pulse 2s infinite ease-in-out;
+    }
+
+    .logo-icon {
+      font-size: 3rem;
+    }
+
+    h1 {
+      font-size: 1.8rem;
+      font-weight: 800;
+      margin-bottom: 0.5rem;
+      letter-spacing: 0.5px;
+      background: linear-gradient(to right, #ffffff, #a06cd5);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    p {
+      color: var(--sub-text);
+      font-size: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid rgba(255, 255, 255, 0.1);
+      border-radius: 50%;
+      border-top-color: var(--accent-color);
+      animation: spin 1s linear infinite;
+      margin: 0 auto 1.5rem;
+    }
+
+    .btn {
+      background: linear-gradient(135deg, #7b2cbf 0%, #5a189a 100%);
+      color: white;
+      border: none;
+      padding: 0.8rem 1.8rem;
+      font-size: 1rem;
+      font-weight: 600;
+      border-radius: 30px;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(123, 44, 191, 0.4);
+      transition: all 0.3s ease;
+      display: none;
+    }
+
+    .btn:active {
+      transform: scale(0.95);
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    @keyframes pulse {
+      0%, 100% {
+        transform: scale(1);
+        box-shadow: 0 0 20px rgba(123, 44, 191, 0.2);
+      }
+      50% {
+        transform: scale(1.05);
+        box-shadow: 0 0 35px rgba(123, 44, 191, 0.4);
+      }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+  <!-- Capacitor Script will be injected automatically at build time -->
+  <script src="cordova.js"></script>
+  <script src="capacitor.js"></script>
+</head>
+<body>
+  <div class="container">
+    <div class="logo-container">
+      <div class="logo">
+        <span class="logo-icon">✨</span>
+      </div>
+    </div>
+    <h1 id="status-title">Surprise Ville Partners</h1>
+    <p id="status-desc">Verifying your identity...</p>
+    <div class="spinner" id="spinner"></div>
+    <button class="btn" id="retry-btn">Retry Unlock</button>
+  </div>
+  <script src="js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+{
+  "name": "surpriseville-partners-app",
+  "version": "1.0.0",
+  "description": "Android Wrapper App for Surprise Ville Partners",
+  "main": "index.js",
+  "scripts": {
+    "build": "echo \"No build script required for live webview wrapper\""
+  },
+  "dependencies": {
+    "@capacitor/android": "^6.0.0",
+    "@capacitor/core": "^6.0.0",
+    "@capgo/capacitor-native-biometric": "^6.0.0"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^6.0.0"
+  }
+}

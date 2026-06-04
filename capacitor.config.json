@@ -1,0 +1,9 @@
+{
+  "appId": "com.surpriseville.partners",
+  "appName": "Surprise Ville Partners",
+  "webDir": "www",
+  "server": {
+    "url": "https://partners.surpriseville.co.in",
+    "cleartext": true
+  }
+}

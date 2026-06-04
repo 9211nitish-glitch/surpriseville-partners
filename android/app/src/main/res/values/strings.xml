@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Surprise Ville Partners</string>
+    <string name="title_activity_main">Surprise Ville Partners</string>
+    <string name="package_name">com.surpriseville.partners</string>
+    <string name="custom_url_scheme">com.surpriseville.partners</string>
+</resources>
