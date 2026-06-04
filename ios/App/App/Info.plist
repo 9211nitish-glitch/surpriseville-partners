@@ -45,5 +45,13 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>We need camera access for WebRTC video calling between vendors and admins.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>We need microphone access for WebRTC audio/video calling.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>We need location access to track vendor positions during active job delivery.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>We need background location access to update delivery tracking for customers.</string>
 </dict>
 </plist>
