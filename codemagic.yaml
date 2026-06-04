@@ -9,8 +9,8 @@ workflows:
     triggering:
       events:
         - push
-      branches:
-        - master
+      branch_patterns:
+        - pattern: 'master'
     scripts:
       - name: Install dependencies
         script: |
