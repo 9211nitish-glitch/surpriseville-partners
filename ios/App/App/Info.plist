@@ -53,5 +53,10 @@
 	<string>We need location access to track vendor positions during active job delivery.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>We need background location access to update delivery tracking for customers.</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>audio</string>
+		<string>location</string>
+	</array>
 </dict>
 </plist>
