@@ -91,7 +91,7 @@ try {
 
     if ($pc_count > 0) {
         if ($mainSubcatId !== null) {
-            $pc_allowed = $conn->prepare("SELECT id FROM package_categories WHERE package_id = ? AND category_id = ? AND (subcategory_id IS NULL OR subcategory_id = ?) LIMIT 1");
+            $pc_allowed = $conn->prepare("SELECT id FROM package_categories WHERE package_id = ? AND ( (category_id = ? AND subcategory_id IS NULL) OR (subcategory_id = ?) ) LIMIT 1");
             $pc_allowed->bind_param("iii", $package_id, $mainCatId, $mainSubcatId);
         } else {
             $pc_allowed = $conn->prepare("SELECT id FROM package_categories WHERE package_id = ? AND category_id = ? AND subcategory_id IS NULL LIMIT 1");

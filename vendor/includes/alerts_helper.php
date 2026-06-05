@@ -32,6 +32,8 @@ function getAvailableAlerts($conn, $mainConn, $vendor_id)
     }
     $sub_stmt->close();
 
+    $allowed_subcats = [];
+
     if ($package_id !== null) {
         $pc_stmt = $conn->prepare("SELECT category_id, subcategory_id FROM package_categories WHERE package_id = ?");
         $pc_stmt->bind_param("i", $package_id);
@@ -45,13 +47,20 @@ function getAvailableAlerts($conn, $mainConn, $vendor_id)
                 $pc_rules[$c] = [];
             }
             $pc_rules[$c][] = $s;
+            if ($s !== null) {
+                $allowed_subcats[] = $s;
+            }
         }
         $pc_stmt->close();
     }
 
-    $isAllowed = function($c, $s) use ($has_rules, $pc_rules) {
+    $isAllowed = function($c, $s) use ($has_rules, $pc_rules, $allowed_subcats) {
         if (!$has_rules) {
             return true; // No rules means all allowed
+        }
+        // If the subcategory itself is explicitly allowed in any package rule, allow it!
+        if ($s !== null && in_array((int)$s, $allowed_subcats, true)) {
+            return true;
         }
         if (!isset($pc_rules[$c])) {
             return false; // Category not allowed

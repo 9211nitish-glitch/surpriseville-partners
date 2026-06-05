@@ -76,7 +76,7 @@ try {
 
     if ($pc_count > 0) {
         if ($order_subcategory_id !== null) {
-            $pc_allowed = $conn->prepare("SELECT id FROM package_categories WHERE package_id = ? AND category_id = ? AND (subcategory_id IS NULL OR subcategory_id = ?) LIMIT 1");
+            $pc_allowed = $conn->prepare("SELECT id FROM package_categories WHERE package_id = ? AND ( (category_id = ? AND subcategory_id IS NULL) OR (subcategory_id = ?) ) LIMIT 1");
             $pc_allowed->bind_param("iii", $package_id, $order_category_id, $order_subcategory_id);
         } else {
             $pc_allowed = $conn->prepare("SELECT id FROM package_categories WHERE package_id = ? AND category_id = ? AND subcategory_id IS NULL LIMIT 1");

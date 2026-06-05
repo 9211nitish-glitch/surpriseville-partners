@@ -52,9 +52,9 @@ function expandRadiusLoop($conn, $task_id)
     // Loop until found or max limit
     while ($next_radius <= $max_radius || $next_radius == 999) {
 
-        $subcat_cond = $subcat_id === null 
-            ? "subcategory_id IS NULL" 
-            : "(subcategory_id IS NULL OR subcategory_id = $subcat_id)";
+        $pc_cond = $subcat_id === null 
+            ? "(category_id = $cat_id AND subcategory_id IS NULL)" 
+            : "( (category_id = $cat_id AND subcategory_id IS NULL) OR subcategory_id = $subcat_id )";
 
         if ($next_radius == 999) {
             // Fallback: Find all active EXTERNAL vendors with the required skill, regardless of location
@@ -72,8 +72,7 @@ function expandRadiusLoop($conn, $task_id)
                         EXISTS (
                             SELECT 1 FROM package_categories 
                             WHERE package_id = vs.package_id 
-                            AND category_id = $cat_id 
-                            AND $subcat_cond
+                            AND $pc_cond
                         )
                     )
                     AND (p.order_min_price IS NULL OR $original_price >= p.order_min_price)
@@ -96,8 +95,7 @@ function expandRadiusLoop($conn, $task_id)
                 EXISTS (
                     SELECT 1 FROM package_categories 
                     WHERE package_id = vs.package_id 
-                    AND category_id = $cat_id 
-                    AND $subcat_cond
+                    AND $pc_cond
                 )
             )
             AND (p.order_min_price IS NULL OR $original_price >= p.order_min_price)
