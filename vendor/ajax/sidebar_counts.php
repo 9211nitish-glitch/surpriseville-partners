@@ -22,26 +22,9 @@ $counts = [
 
 if ($vendor_id > 0) {
     // 1. Pending Counts (Shop + Gigs)
-    // Shop Pending
-    $stmt1 = $conn->prepare("SELECT COUNT(*) as cnt FROM order_vendor_notifications WHERE vendor_id = ? AND status = 'pending'");
-    $stmt1->bind_param("i", $vendor_id);
-    $stmt1->execute();
-    $res1 = $stmt1->get_result()->fetch_assoc();
-    $counts['pending'] += (int)$res1['cnt'];
-    $stmt1->close();
-
-    // Gig Pending
-    $stmt2 = $conn->prepare("
-        SELECT COUNT(*) as cnt 
-        FROM task_alerts ta 
-        JOIN manual_tasks mt ON mt.id = ta.task_id 
-        WHERE ta.vendor_id = ? AND ta.status = 'pending' AND mt.status = 'open'
-    ");
-    $stmt2->bind_param("i", $vendor_id);
-    $stmt2->execute();
-    $res2 = $stmt2->get_result()->fetch_assoc();
-    $counts['pending'] += (int)$res2['cnt'];
-    $stmt2->close();
+    require_once '../includes/alerts_helper.php';
+    $finalAlerts = getAvailableAlerts($conn, $mainConn, $vendor_id);
+    $counts['pending'] = count($finalAlerts);
 
     // 2. Active Shop Orders
     // We only count orders that have been 'accepted' in notifications AND are not 'completed' in assignments
