@@ -69,7 +69,7 @@ function dispatch_order($order_id)
 
     // 2. Get Order Details from Shop DB
     $stmt = $shop_pdo->prepare("
-        SELECT o.city, o.pincode, o.service_id, o.customer_name, o.total_amount 
+        SELECT o.city, o.pincode, o.service_id, o.name AS customer_name, o.total_amount 
         FROM orders o 
         WHERE o.id = ? 
         LIMIT 1
@@ -141,12 +141,40 @@ function dispatch_order($order_id)
         return ['success' => false, 'message' => 'No target categories or subcategories found'];
     }
 
-    // 4. Find Matching Vendors (Vendor DB) - BROADCASTING (Pick up to 5)
-    $pairConditions = [];
+    // Fetch addon prices for price-filter reference (keyed by category_id)
+    $addonPrices = [];
+    $addonStmt = $shop_pdo->prepare("
+        SELECT a.category_id, a.price 
+        FROM order_addons oa 
+        JOIN addons a ON oa.addon_id = a.id 
+        WHERE oa.order_id = ?
+    ");
+    $addonStmt->execute([$order_id]);
+    while ($aRow = $addonStmt->fetch(PDO::FETCH_ASSOC)) {
+        if ($aRow['category_id']) {
+            // Store highest price per category (in case multiple addons of same category)
+            $cid = (int)$aRow['category_id'];
+            $addonPrices[$cid] = max($addonPrices[$cid] ?? 0, (float)$aRow['price']);
+        }
+    }
+
+    $total_amount = (float)($order['total_amount'] ?? 0);
+    $sent_at = date('Y-m-d H:i:s');
+    $notified_count = 0;
+    $all_vendor_ids = [];
+
+    // 4. Dispatch INDEPENDENTLY per category pair — each gets its own LIMIT 5
     foreach ($target_pairs as $pair) {
         $c = (int)$pair['category_id'];
-        if ($pair['subcategory_id'] === null) {
-            $pairConditions[] = "(
+        $s = $pair['subcategory_id'] !== null ? (int)$pair['subcategory_id'] : null;
+
+        // Use addon price for the package price-filter if this is an addon category, 
+        // otherwise use the total order amount
+        $price_for_filter = isset($addonPrices[$c]) ? $addonPrices[$c] : $total_amount;
+
+        // Build category match condition for this specific pair
+        if ($s === null) {
+            $pairCondition = "
                 (
                     (SELECT COUNT(*) FROM package_categories WHERE package_id = vs.package_id) = 0
                     OR 
@@ -157,10 +185,9 @@ function dispatch_order($order_id)
                         AND subcategory_id IS NULL
                     )
                 )
-            )";
+            ";
         } else {
-            $s = (int)$pair['subcategory_id'];
-            $pairConditions[] = "(
+            $pairCondition = "
                 (
                     (SELECT COUNT(*) FROM package_categories WHERE package_id = vs.package_id) = 0
                     OR 
@@ -171,60 +198,53 @@ function dispatch_order($order_id)
                         AND (subcategory_id IS NULL OR subcategory_id = $s)
                     )
                 )
-            )";
+            ";
+        }
+
+        $vQuery = "
+            SELECT DISTINCT v.id 
+            FROM vendors v
+            INNER JOIN vendor_subscriptions vs ON vs.vendor_id = v.id AND vs.status = 'active' AND vs.credits_remaining > 0
+            INNER JOIN packages p ON vs.package_id = p.id
+            LEFT JOIN vendor_wallet vw ON vw.vendor_id = v.id
+            WHERE v.city = ?
+            AND $pairCondition
+            AND v.status = 'active'
+            AND (vw.balance IS NULL OR vw.balance >= 0)
+            AND (p.order_min_price IS NULL OR ? >= p.order_min_price)
+            AND (p.order_max_price IS NULL OR ? <= p.order_max_price)
+            ORDER BY (SELECT COUNT(*) FROM order_vendor_notifications WHERE vendor_id = v.id AND status='accepted') ASC
+            LIMIT 5
+        ";
+
+        $stmt = $vn_pdo->prepare($vQuery);
+        $stmt->execute([$city, $price_for_filter, $price_for_filter]);
+        $vendor_ids = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+        // 5. Insert Notifications for this category's vendors
+        foreach ($vendor_ids as $vid) {
+            if (in_array($vid, $all_vendor_ids)) continue; // already notified for this order
+            
+            $chk = $vn_pdo->prepare("SELECT id FROM order_vendor_notifications WHERE order_id=? AND vendor_id=?");
+            $chk->execute([$order_id, $vid]);
+            
+            if (!$chk->fetchColumn()) {
+                $insStmt = $vn_pdo->prepare("INSERT INTO order_vendor_notifications (order_id, vendor_id, status, sent_at) VALUES (?, ?, 'pending', ?)");
+                $insStmt->execute([$order_id, $vid, $sent_at]);
+                $notified_count++;
+            }
+            $all_vendor_ids[] = (int)$vid;
         }
     }
-    
-    $pairSql = implode(" OR ", $pairConditions);
 
-    $total_amount = (float)($order['total_amount'] ?? 0);
-
-    // Find vendors in City with matching Categories & Subcategories
-    // Priority: Active, positive wallet balance, sorted by least total jobs (for load balancing)
-    $vQuery = "
-        SELECT DISTINCT v.id 
-        FROM vendors v
-        INNER JOIN vendor_subscriptions vs ON vs.vendor_id = v.id AND vs.status = 'active' AND vs.credits_remaining > 0
-        INNER JOIN packages p ON vs.package_id = p.id
-        LEFT JOIN vendor_wallet vw ON vw.vendor_id = v.id
-        WHERE v.city = ?
-        AND ($pairSql)
-        AND v.status = 'active'
-        AND (vw.balance IS NULL OR vw.balance >= 0)
-        AND (p.order_min_price IS NULL OR ? >= p.order_min_price)
-        AND (p.order_max_price IS NULL OR ? <= p.order_max_price)
-        ORDER BY (SELECT COUNT(*) FROM order_vendor_notifications WHERE vendor_id = v.id AND status='accepted') ASC
-        LIMIT 5
-    ";
-
-    $stmt = $vn_pdo->prepare($vQuery);
-    $stmt->execute([$city, $total_amount, $total_amount]);
-    $vendor_ids = $stmt->fetchAll(PDO::FETCH_COLUMN);
-
-    if (empty($vendor_ids)) {
+    if ($notified_count === 0 && empty($all_vendor_ids)) {
         // Fallback: Notify Admin that no vendors matched
         require_once __DIR__ . '/admin_notify.php';
         sendAdminAlert($order_id, 'no_matching_vendors', $shop_pdo);
         return ['success' => false, 'message' => "No matching vendors found in $city. Admin notified."];
     }
 
-    // 5. Insert Notifications (Vendor DB) - BROADCAST to found vendors
-    $sent_at = date('Y-m-d H:i:s');
-    $notified_count = 0;
-    
-    foreach ($vendor_ids as $vid) {
-        // Check duplicate
-        $chk = $vn_pdo->prepare("SELECT id FROM order_vendor_notifications WHERE order_id=? AND vendor_id=?");
-        $chk->execute([$order_id, $vid]);
-        
-        if (!$chk->fetchColumn()) {
-            $insStmt = $vn_pdo->prepare("INSERT INTO order_vendor_notifications (order_id, vendor_id, status, sent_at) VALUES (?, ?, 'pending', ?)");
-            $insStmt->execute([$order_id, $vid, $sent_at]);
-            $notified_count++;
-        }
-    }
-
-    return ['success' => true, 'message' => "Broadcasting complete. $notified_count vendors notified."];
+    return ['success' => true, 'message' => "Broadcasting complete. $notified_count vendors notified (categories: " . count($target_pairs) . ")."];
 }
 
 // REST API Handling
